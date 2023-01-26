@@ -1,7 +1,7 @@
 list_bags = dir('C:\Users\Admin\Desktop\New_Tests_New_Wings');
 threshold_std_pitch = 8;
 threshold_std_altitude = 0.08;
-
+mkdir frequency_altitude
 for kk = 1:length(list_bags)
     W = contains(num2str(list_bags(kk).name),'bag');
     if W
@@ -149,16 +149,40 @@ for kk = 1:length(list_bags)
     cd C:\Users\Admin\Desktop\New_Tests_New_Wings
     variableCreator(sprintf('f_z_%i', num(1)),f_z)
     cd(sprintf('Objective Altitude= %dcm',num(1)))
-    save(sprintf ('f_z_%i.mat', num(1)))
+    save(sprintf ('Workspace_test_%icm.mat', num(1)))
 
+
+    % create latex file
+    name_latex_file = strcat('N_round= ',num2str(length(initcross)),', Altitude= ',num2str(mean([rounds.meanAltitude])),'m, Frequency = ', num2str(mean([rounds.FlappingFrequency])), 'Hz.tex');
+    fid = fopen(name_latex_file, 'wt' );
+    fprintf( fid, '\\documentclass[aspectratio=169]{beamer}\n');
+    fprintf( fid, '\\usepackage{url}\n');
+    fprintf( fid, '\\usepackage{xcolor}\n');
+    fprintf( fid, '\\usepackage{listings}\n');
+    fprintf( fid, '\\usepackage{multicol}\n');
+    fprintf( fid, '\\usepackage{xparse}\n');
+    fprintf( fid, '\\usepackage{subcaption}\n');
+    fprintf( fid, '\\NewDocumentCommand{\codeword}{v}{\n');
+    fprintf( fid, '\\texttt{\\textcolor{blue}{#1}}}\n');
+    fprintf( fid, '\\begin{document}\n');
+    fprintf( fid, '\\begin{frame}{}\n');
+    fprintf( fid, '\\begin{itemize}\n');
+    fprintf( fid, '\\Huge{\\item Objective altitude: $%dcm$}\n', num(1));
+    fprintf( fid, '\\item \\Huge{Number of rounds: $%d$}\n', length(initcross));
+    fprintf( fid, '\\end{itemize}\n');
+    fprintf( fid, '\\end{frame}\n');
+    fprintf( fid, '\\begin{frame}{\\Huge{Summary: $%d$ rounds - $%d$cm}}\n',length(initcross), num(1));
+   
     %% plot figures
     H = figure;
     A = [rounds.meanAltitude];
     B = [rounds.FlappingFrequency];
     A_best = [];
     B_best = [];
+    Nselected_rounds = 0;
     for i=1:length(initcross)
         if std(altitude_rounds{i}) < threshold_std_altitude && std(pitch_rounds_vc{i}) < threshold_std_pitch
+            Nselected_rounds = Nselected_rounds + 1;
             scatter(A(i), B(i),'x');hold on;
             text(A(i),B(i),strcat(num2str(i)));
             hold on;
@@ -180,6 +204,28 @@ for kk = 1:length(list_bags)
     close(H);
     cd C:\Users\Admin\Desktop\New_Tests_New_Wings
     cd(sprintf('Objective Altitude= %dcm',num(1)))
+    fprintf( fid, '\\begin{itemize}\n');
+    fprintf( fid, '\\item Number of the selected rounds: $%d$\n', Nselected_rounds);
+    fprintf( fid, '\\item Mean altitude: $%.3fm$\n', mean([rounds.meanAltitude]));
+    fprintf( fid, '\\item Mean flapping frequency: $%.3fHz$\n', rounds(1).meanFlappingFrequency);
+    fprintf( fid, '\\item Standard deviation of the flapping frequency: $%.3fHz$\n', rounds(1).stdFrequency);
+    fprintf( fid, '\\end{itemize}\n');
+    fprintf( fid, '\\begin{figure}\n');
+    fprintf( fid, '\\centering\n');
+    fprintf( fid, '\\begin{subfigure}[b]{0.45\\textwidth}\n');
+    fprintf( fid, '\\centering\n');
+    fprintf( fid, '\\includegraphics[width=\\textwidth]{Trajectory_Test_%d.png}\n', num(1));
+    fprintf( fid, '\\caption{2D Trajectory}\n');
+    fprintf( fid, '\\end{subfigure}\n');
+    fprintf( fid, '\\hfill\n');
+    fprintf( fid, '\\begin{subfigure}[b]{0.45\\textwidth}\n');
+    fprintf( fid, '\\centering\n');
+    fprintf( fid, '\\includegraphics[width=\\textwidth]{Height_Test_%d.png}\n', num(1));
+    fprintf( fid, '\\caption{Altitude during the flight.}\n');
+    fprintf( fid, '\\end{subfigure}\n');
+    fprintf( fid, '\\end{figure}\n');
+    fprintf( fid, '\\end{frame}\n')
+
     for i=1:length(initcross)
         if std(altitude_rounds{i}) < threshold_std_altitude && std(pitch_rounds_vc{i}) < threshold_std_pitch
             h = figure;
@@ -192,7 +238,6 @@ for kk = 1:length(list_bags)
             savefig(h, sprintf('Pitch_round_%d_Test_%d.fig',i,num(1)));
             saveas(h, sprintf('Pitch_round_%d_Test_%d.png',i,num(1)));
             close(h);
-
             % fft of filtered pitch
             L = length(pitch_rounds_vc{i});
             f = Fs*(0:(L/2))/L;
@@ -209,7 +254,27 @@ for kk = 1:length(list_bags)
             savefig(hh, sprintf('fft_pitch_round_%d_Test_%d.fig',i,num(1)));
             saveas(hh, sprintf('fft_pitch_round_%d_Test_%d.png',i,num(1)));
             close(hh);
-            
+            fprintf( fid, '\\begin{frame}{Details - Round %d}\n', i);
+            fprintf( fid, '\\begin{itemize}\n');
+            fprintf( fid, '\\item Mean altitude: $%.3fm$\n', rounds(i).meanAltitude);
+            fprintf( fid, '\\item Standard deviation of the altitude: $%.3fm$\n', rounds(i).stdAltitude);
+            fprintf( fid, '\\item Standard deviation of the pitch: $%.3f^{\\circ}$\n', rounds(i).stdPitch);
+            fprintf( fid, '\\end{itemize}\n');
+            fprintf( fid, '\\begin{figure}\n');
+            fprintf( fid, '\\centering\n');
+            fprintf( fid, '\\begin{subfigure}[b]{0.495\\textwidth}\n');
+            fprintf( fid, '\\centering\n');
+            fprintf( fid, '\\includegraphics[width=\\textwidth]{Pitch_round_%d_Test_%d.png}\n', i, num(1));
+            fprintf( fid, '\\caption{Pitch measured during one round.}\n');
+            fprintf( fid, '\\end{subfigure}\n');
+            fprintf( fid, '\\hfill\n');
+            fprintf( fid, '\\begin{subfigure}[b]{0.495\\textwidth}\n');
+            fprintf( fid, '\\centering\n');
+            fprintf( fid, '\\includegraphics[width=\\textwidth]{fft_pitch_round_%d_Test_%d.png}\n', i, num(1));
+            fprintf( fid, '\\caption{FFT of the measured pitch.}\n');
+            fprintf( fid, '\\end{subfigure}\n');
+            fprintf( fid, '\\end{figure}\n');
+            fprintf( fid, '\\end{frame}\n');
         end
     end
     hhh = figure;
@@ -235,6 +300,12 @@ for kk = 1:length(list_bags)
     savefig(hhhh, sprintf('Trajectory_Test_%d.fig',num(1)));
     saveas(hhhh, sprintf('Trajectory_Test_%d.png',num(1)));
     close(hhhh);
+    fprintf( fid, '\\begin{frame}{Flapping frequency = f(Altitude)}\n');
+    fprintf( fid, '\\begin{center}\n');
+    fprintf( fid, '\\includegraphics[width = 0.65\\paperwidth]{FlappingFrequency-Altitude_round_Test_%dcm.png}\n', num(1));
+    fprintf( fid, '\\end{center}\n');
+    fprintf( fid, '\\end{frame}\n');
+    fprintf( fid, '\\end{document}\n');
     cd C:\Users\Admin\Desktop\New_Tests_New_Wings
     end
 end
